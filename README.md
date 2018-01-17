@@ -15,7 +15,7 @@ Tested with:
 * Windows 10
 
 ## Features
-* Cconfigurable minimum frame rate
+* Configurable minimum frame rate
 * Configurable maximum time (for time lapse video)
 * Requires printer ip address
 * Records using OpenCV or ffmpeg
