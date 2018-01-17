@@ -1324,6 +1324,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='Record time lapse video of 3DWOX printer in action')
     parser.add_argument('-o','--out', action='store',help='Destination File Name defaults to the model name.avi', default=None)
+    parser.add_argument('-od','--outdirectory', action='store',help='Destination directory (default=current directory)', default='./')
     parser.add_argument('-f','--fps', action='store',type=int, default=10, help='min playback speed, 1=real time, 10=10X real time etc default=10')
     parser.add_argument('-t','--time', action='store',type=int, default=300, help='optional max recording time in seconds. 0=unlimited. Set max duration of video, and fps is calculated automatically (but not less than min frame rate). Default=300')
     parser.add_argument('-u','--url', action="store", default='192.168.100.204', help='url/IP to read image from (default=192.168.100.204)')
@@ -1352,7 +1353,7 @@ def main():
         log_level = logging.INFO
         show_output = 'quiet'
         
-    log_file=[os.path.expanduser(arg.log)]
+    log_file=[os.path.normpath(os.path.expanduser(arg.log))]
     
     setup_logger('Main', log_file, level=log_level, console=True)
     setup_logger('Secondary', log_file, level=log_level, console=False)
@@ -1363,6 +1364,12 @@ def main():
     log.info("****** Program Started ********")
     log.debug("Debug Mode")
     log.info("Logging to file: %s" % os.path.expanduser(arg.log))
+    if not os.path.isdir(arg.outdirectory):
+        log.error("Directory '%s' does not exist, please create it first, before using it" % arg.outdirectory)
+        sys.exit(1)
+    log.info("Writing output files to: %s" % arg.outdirectory)
+    arg.outdirectory + "/"
+    
     
     if arg.time <= 0:
         arg.time = None
@@ -1437,7 +1444,7 @@ def main():
                 #output file processing
                 if arg.ffmpeg:
                     ffmpeg_st = 'ffmpeg output, Quality: %d' % arg.quality
-                    out, out_file = open_ffmpeg_file(out_file, fps, arg.quality, show_output, FFMPEG_BINARY)
+                    out, out_file = open_ffmpeg_file(os.path.normpath(arg.outdirectory + out_file), fps, arg.quality, show_output, FFMPEG_BINARY)
                 else:
                     if arg.postprocess:
                         new_file = out_file
@@ -1445,7 +1452,7 @@ def main():
                         ffmpeg_st = 'OpenCV Output, ffmpeg post processing (to file: %s), Quality: %d' % (new_file,arg.quality)
                     else:
                         ffmpeg_st = 'OpenCV Output'
-                    out, out_file = open_file(out_file, fps)
+                    out, out_file = open_file(os.path.normpath(arg.outdirectory + out_file), fps)
                     
                 postroll = arg.postroll*fps
                 log.info("Printing: %s, Material:%s, colour:%s, from:%s Output: %s.\r\nRecording at %dX realtime %s. Estimated print time: %d:%d, completed at: %s" % ( print_data['model_name'],
@@ -1519,7 +1526,7 @@ def main():
                     out.release()
                     log.info("file: %s written" % out_file)
                     if arg.postprocess:
-                        post_process_ffmpeg_thread(out_file, new_file, arg.deleteoriginal, arg.quality, show_output, FFMPEG_BINARY)
+                        post_process_ffmpeg_thread(os.path.normpath(arg.outdirectory + out_file), os.path.normpath(arg.outdirectory + new_file), arg.deleteoriginal, arg.quality, show_output, FFMPEG_BINARY)
                     time.sleep(20)
                     log.info("Waiting to start Recording, please send/load file to printer")
                 else:
@@ -1538,7 +1545,7 @@ def main():
         pass
     log.info("file: %s written" % out_file)
     if arg.postprocess:
-        post_process_ffmpeg(out_file, new_file, arg.deleteoriginal, arg.quality, show_output, FFMPEG_BINARY)
+        post_process_ffmpeg(os.path.normpath(arg.outdirectory + out_file), os.path.normpath(arg.outdirectory + new_file), arg.deleteoriginal, arg.quality, show_output, FFMPEG_BINARY)
         
 if __name__ == "__main__":
     main()

@@ -57,15 +57,18 @@ cd Timelapse-Video-for-3D-printer
 run `./record_3dprint.py -h` (or `python ./record_3dprint.py -h` to get the available options. This is what you will get:
 
 ```bash
-usage: record_3dprint.py [-h] [-o OUT] [-f FPS] [-t TIME] [-u URL] [-p PORT]
-                         [-pr POSTROLL] [-l LOG] [-d] [-Fx FFMPEGEXECUTABLE]
-                         [-P | -F] [-R] [-Q QUALITY] [-X] [-D] [-V]
+usage: record_3dprint.py [-h] [-o OUT] [-od OUTDIRECTORY] [-f FPS] [-t TIME]
+                         [-u URL] [-p PORT] [-pr POSTROLL] [-l LOG] [-d]
+                         [-Fx FFMPEGEXECUTABLE] [-P | -F] [-R] [-Q QUALITY]
+                         [-X] [-D] [-V]
 
 Record time lapse video of 3DWOX printer in action
 
 optional arguments:
   -h, --help            show this help message and exit
   -o OUT, --out OUT     Destination File Name defaults to the model name.avi
+  -od OUTDIRECTORY, --outdirectory OUTDIRECTORY
+                        Destination directory (default=current directory)
   -f FPS, --fps FPS     min playback speed, 1=real time, 10=10X real time etc
                         default=10
   -t TIME, --time TIME  optional max recording time in seconds. 0=unlimited.
@@ -163,11 +166,13 @@ You can also specify the location and name of the output file using the `-o` opt
 
 You can specify the name and location of the log file using the `-l` option. Setting this to 'none', results in no log file.
 
-The maximum length (in seconds) of the time laps video is 5 minutes by default, it may be shorter (for a print of less that 50 minutes), you can set this to whatever you like using the `-t` option, and the fps (frames per second) will be adjusted accordingly. Setting this to 0 results in a video of unlimited length.
+Using the `-od` option allows the output directory to be specified, default is the current directory. You could specify this in the filename, but this option allows you to specify the directory, while the filenames are automatically generated. Don't include a path in the filename, if you are using the `-od` option.
+
+The maximum length (in seconds) of the time lapse video is 5 minutes by default, it may be shorter (for a print of less that 50 minutes), you can set this to whatever you like using the `-t` option, and the fps (frames per second) will be adjusted accordingly. Setting this to 0 results in a video of unlimited length.
 
 The `-Q` option only works with ffmpeg output, and sets the quality of the video, value is 1-31, with 1 being the best, and 31 the worst. 30 is the default. The better the quality of the video, the bigger the file generated.
 
-Normally the program will exit when the print is done. adding the `-d` modifier makes the program loop, so it will keep outputting videos every time you send a file to print. If you leave the `-o` off, the filenames are generated automatically.
+Normally the program will exit when the print is done. Adding the `-d` modifier makes the program loop, so it will keep outputting videos every time you send a file to print. If you leave the `-o` off, the filenames are generated automatically.
 
 The `-D` and `-X` options are for debugging, `-X` forces the program to start recording, even if the printer is not printing, and can be used for testing. the `-D` option replaces the bar graph with debug text.
 
