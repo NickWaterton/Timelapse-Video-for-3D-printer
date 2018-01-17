@@ -8,23 +8,23 @@ It may work on other version of the printer (D201 for example) but is untested (
 
 This is version 1.0 so it may be buggy!
 
-*NOTE: This program is written for Python 2.7, it will not work on Python 3.X without some fixing*
+**NOTE: This program is written for Python 2.7, it will not work on Python 3.X without some fixing**
 
 Tested with:
 * Ubuntu 14.04
 * Windows 10
 
 ## Features
-* configurable minimum frame rate
-* configurable maximum time (for time lapse video)
-* requires printer ip address
+* Cconfigurable minimum frame rate
+* Configurable maximum time (for time lapse video)
+* Requires printer ip address
 * Records using OpenCV or ffmpeg
 * Video includes text of all main printer variables
 * Can be run in "daemon mode" so it runs continually, and records all prints
-* if filename not specified, uses the model name as the filename
-* will not overwrite existing files (adds "-number", to existing file names)
-* gives "bar graph" progress display on the command line by default, with useful print statistics.
-* configurable postroll (seconds of video after print finished)
+* If filename not specified, uses the model name as the filename
+* Will not overwrite existing files (adds "-number", to existing file names)
+* Gives "bar graph" progress display on the command line by default, with useful print statistics.
+* Configurable postroll (seconds of video after print finished)
 * Works on linux and Windows
 
 ## Screen Shots
@@ -36,7 +36,7 @@ Tested with:
 This program uses OpenCV 3.x (tested with 3.2)
 
 ## Dependencies
-The following libraries/modules are used. Some are optional:
+The following libraries/modules are used:
 * openCV      *required*
 * numpy       *required (used by openCV)*
 
@@ -143,7 +143,7 @@ sudo apt-get install ffmpeg
 Or any of the other zillions of ways to get ffmpeg in Ubuntu.
 
 ## Usage
-if the ffmpeg executable is not in your path, or you are on windows, you need to specify the location and name of the ffmpeg executable on the command line.
+If the ffmpeg executable is not in your path, or you are on windows, you need to specify the location and name of the ffmpeg executable on the command line.
 You can now generate an .mp4 file time lapse video like this:
 
 ```bash
@@ -160,11 +160,16 @@ default file name is now ".mp4"
 You can use `-F` or `-P`, -F causes the .mp4 to be created directly, -P creates a temporary Huge MJPG, then at the end of the recording, converts it to a ".mp4" file, and makes it suitable for web streaming. This obviously uses vastly more disk space than creating the (relatively) small ".mp4" file directly.
 
 You can also specify the location and name of the output file using the `-o` option. The type of file is dictated by the extension. I have tested ".mkv", ".mov", ".avi".
+
 You can specify the name and location of the log file using the `-l` option. Setting this to 'none', results in no log file.
+
 The maximum length (in seconds) of the time laps video is 5 minutes by default, it may be shorter (for a print of less that 50 minutes), you can set this to whatever you like using the `-t` option, and the fps (frames per second) will be adjusted accordingly. Setting this to 0 results in a video of unlimited length.
+
 The `-Q` option only works with ffmpeg output, and sets the quality of the video, value is 1-31, with 1 being the best, and 31 the worst. 30 is the default. The better the quality of the video, the bigger the file generated.
+
 Normally the program will exit when the print is done. adding the `-d` modifier makes the program loop, so it will keep outputting videos every time you send a file to print. If you leave the `-o` off, the filenames are generated automatically.
+
 The `-D` and `-X` options are for debugging, `-X` forces the program to start recording, even if the printer is not printing, and can be used for testing. the `-D` option replaces the bar graph with debug text.
 
 
-A couple of example output videos are included so you can see how it works.
+An example output video (reg_litho_3cm[766].mp4) is included so you can see how it looks.
