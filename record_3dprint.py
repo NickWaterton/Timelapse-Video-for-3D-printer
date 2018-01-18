@@ -14,6 +14,8 @@ NOTE: Running this program continually will keep the light on your printer all t
 
 url for jpeg image is http://myprinterIP/?action=snapshot or http://myprinterIP/?action=snapshot&n=15000000 where 150000000 is unix timestamp.
 data url http://myprinterIP/cgi-bin/config_periodic_data.cgi
+
+V 1.01  NW 18/1/2018    Updated output directory option
 '''
 
 from __future__ import print_function
@@ -29,7 +31,7 @@ import threading
 import logging
 from logging.handlers import RotatingFileHandler
 
-__version__ = "1.0"
+__version__ = "1.01"
 
 """ 
 Original Author  Ernesto P. Adorio, Ph.D 
@@ -1237,12 +1239,15 @@ def overlay_text(img, out_file, started, PrintJobStatus, fps, print_data, durati
     cv2.addWeighted(overlay_text, opacity, overlay_text, 1 - opacity, 0, overlay_text)
     return overlay_text
     
-def get_filename(out_file, extension=None):
+def get_filename(out_file, extension=None, out_dir=None):
     '''
     get unique file name, change extension if given
     '''
+    
     dst_dir, basename = os.path.split(out_file)
-    head, tail = os.path.splitext(out_file)
+    if out_dir is not None:
+        dst_dir = out_dir
+    head, tail = os.path.splitext(basename)
     if extension is not None:
         tail = extension
     if tail == '':
@@ -1269,8 +1274,8 @@ def open_file(out_file, fps):
     fourcc = cv2.VideoWriter_fourcc(*"MJPG")
     
     if not out_file.endswith(".avi"):
-        head, tail = os.path.splitext(out_file)
-        log.warn("This is unlikely to work! If you really want %s output, you should use ffmpeg (the -F option) which will make a proper %s file" % (tail, out_file))
+        head, tail = os.path.splitext(os.path.basename(out_file))
+        log.warn("This is unlikely to work! If you really want %s output, you should use ffmpeg (the -F option) which will make a proper %s file" % (tail, head+tail))
     
     if out_file.endswith(".mp4"):
         fourcc = cv2.VideoWriter_fourcc(*'X264')  #mp4 (doesn't work without the right codecs installed)
@@ -1286,14 +1291,14 @@ def open_file(out_file, fps):
         log.info("Writing MJPG file %s" % out_file)
       
     out = cv2.VideoWriter(out_file, fourcc, fps, (480, 640))
-    return out, out_file
+    return out
     
 def open_ffmpeg_file(out_file, fps, quality=25, show_output='quiet', FFMPEG_BINARY='ffmpeg'):
     '''
     use ffmpeg to write output video file. can use more codecs (smaller files), but messier
     '''     
     out = VideoWriter(FPS=fps,outFile=out_file,quality=quality,show_output=show_output,FFMPEG_BINARY=FFMPEG_BINARY)
-    return out, out_file
+    return out
     
 def post_process_ffmpeg_thread(out_file, new_file, remove_org=False, quality=30, show_output='quiet', FFMPEG_BINARY='ffmpeg'):
     t = threading.Thread(target=post_process_ffmpeg, name="ffmpeg", args=(out_file, new_file, remove_org, show_output, FFMPEG_BINARY)) #post process file in background
@@ -1316,7 +1321,7 @@ def post_process_ffmpeg(out_file, new_file, remove_org=False, quality=30, show_o
         if remove_org:
             os.unlink(out_file)
             log.info("file %s deleted" % out_file)
-    except CalledProcessError as e:
+    except subprocess.CalledProcessError as e:
         log.error("Error processing file %s, %d, %s" % (out_file, e.returncode, e.output))
     
 def main():
@@ -1363,18 +1368,25 @@ def main():
     
     log.info("****** Program Started ********")
     log.debug("Debug Mode")
-    log.info("Logging to file: %s" % os.path.expanduser(arg.log))
-    if not os.path.isdir(arg.outdirectory):
-        log.error("Directory '%s' does not exist, please create it first, before using it" % arg.outdirectory)
+    log.info("Logging to file: %s" % log_file[0])
+    
+    if arg.out is None:
+        out_dir = os.path.normpath(arg.outdirectory)
+    else:
+        out_dir, arg.out = os.path.split(arg.out)
+        out_dir = os.path.normpath(out_dir)
+
+    if not os.path.isdir(out_dir):
+        log.error("Directory '%s' does not exist, please create it first, before using it" % out_dir)
         sys.exit(1)
-    log.info("Writing output files to: %s" % arg.outdirectory)
-    arg.outdirectory + "/"
+    log.info("Writing output files to: %s" % out_dir)
     
     
     if arg.time <= 0:
         arg.time = None
         
     FFMPEG_BINARY = arg.ffmpegexecutable
+    tmp_file_short = None
     
     modes = {"idle":[10004,10006,10007], "printing":[10002,10003,10018,10023,10021], "invalid":[9999], "busy":[10001,10006,10028], "debug":[0]} #10028 bed moving?completing?, 100022?
         
@@ -1424,11 +1436,12 @@ def main():
                 #file name
                 if arg.out is None:
                     if arg.ffmpeg or arg.postprocess:
-                        out_file = get_filename(print_data['model_name'], ".mp4")   #default is .mp4 for ffmpeg file
+                        out_file = get_filename(print_data['model_name'], ".mp4", out_dir)   #default is .mp4 for ffmpeg file
                     else:
-                        out_file = get_filename(print_data['model_name'], ".avi")   #default is .avi file
+                        out_file = get_filename(print_data['model_name'], ".avi", out_dir)   #default is .avi file
                 else:
-                    out_file = get_filename(arg.out)
+                    out_file = get_filename(arg.out, out_dir=out_dir)
+                out_file_short = os.path.basename(out_file)
                 #duration    
                 if arg.time is None:
                     fps = max(1, arg.fps)
@@ -1444,16 +1457,17 @@ def main():
                 #output file processing
                 if arg.ffmpeg:
                     ffmpeg_st = 'ffmpeg output, Quality: %d' % arg.quality
-                    out, out_file = open_ffmpeg_file(os.path.normpath(arg.outdirectory + out_file), fps, arg.quality, show_output, FFMPEG_BINARY)
+                    out = open_ffmpeg_file(out_file, fps, arg.quality, show_output, FFMPEG_BINARY)
+                elif arg.postprocess:
+                    tmp_file = get_filename("tmp_"+out_file_short, ".avi", out_dir)     #out_file is now temporary file
+                    tmp_file_short = os.path.basename(tmp_file)
+                    ffmpeg_st = 'OpenCV Output, ffmpeg post processing (to file: %s), Quality: %d' % (out_file_short,arg.quality)
+                    out = open_file(tmp_file, fps)
                 else:
-                    if arg.postprocess:
-                        new_file = out_file
-                        out_file = get_filename("tmp_"+out_file, ".avi")             #out_file is now temporary file
-                        ffmpeg_st = 'OpenCV Output, ffmpeg post processing (to file: %s), Quality: %d' % (new_file,arg.quality)
-                    else:
-                        ffmpeg_st = 'OpenCV Output'
-                    out, out_file = open_file(os.path.normpath(arg.outdirectory + out_file), fps)
+                    ffmpeg_st = 'OpenCV Output'
+                    out = open_file(out_file, fps)
                     
+                dest_file = out_file_short if tmp_file_short is None else tmp_file_short    
                 postroll = arg.postroll*fps
                 log.info("Printing: %s, Material:%s, colour:%s, from:%s Output: %s.\r\nRecording at %dX realtime %s. Estimated print time: %d:%d, completed at: %s" % ( print_data['model_name'],
                                                                                                                                                                         print_data['material_name'],
@@ -1475,7 +1489,7 @@ def main():
                 
                 if frames % fps == 0:   #fade text
                     opacity = max(0.6, opacity - 0.01)
-                img_txt = overlay_text(img, out_file, started, PrintJobStatus, fps, print_data, duration, modes, opacity, extra_text=(time.time()-started < 30*fps))
+                img_txt = overlay_text(img, out_file_short, started, PrintJobStatus, fps, print_data, duration, modes, opacity, extra_text=(time.time()-started < 30*fps))
                 
                 out.write(img_txt)  #write frame to the output video
                 
@@ -1501,7 +1515,7 @@ def main():
                     log.debug("Wrote %d frames (%d bytes) at %dfps, %scomp: %d%%, PrintJobStatus: %d(%s) bed_temp:%d noz_temp:%d %s" % (frames,
                                                                                                                                         len(img), 
                                                                                                                                         fps, 
-                                                                                                                                        'to: '+out_file+' ' if frames % 1000 == 0 else '', 
+                                                                                                                                        'to: '+dest_file+' ' if frames % 1000 == 0 else '', 
                                                                                                                                         print_data['percent'],
                                                                                                                                         PrintJobStatus, 
                                                                                                                                         get_mode(PrintJobStatus, modes), 
@@ -1509,24 +1523,25 @@ def main():
                                                                                                                                         print_data['nozzel_temp'], 
                                                                                                                                         suffix_str.replace("remaining","rem")))
                 else:
-                    log_to_file.info("Wrote %d frames (%d bytes) at %dfps to file: %s, completed: %d%%, %s" % (frames, len(img), fps, out_file, print_data['percent'], suffix_str))
-                    print_progress(print_data['percent'], 100, prefix=out_file, suffix=suffix_str, decimals=0, bar_length=40)
+                    log_to_file.info("Wrote %d frames (%d bytes) at %dfps to file: %s, completed: %d%%, %s" % (frames, len(img), fps, dest_file, print_data['percent'], suffix_str))
+                    print_progress(print_data['percent'], 100, prefix=dest_file, suffix=suffix_str, decimals=0, bar_length=40)
             
             if writing and (PrintJobStatus in modes["idle"] or PrintJobStatus in modes["invalid"]):
                 log.info("\nPrinting finished at %s" % (time.ctime()))
                 log.debug("writing postroll frames: %d (%ds)" % (postroll, arg.postroll))
                 opacity = 1.0
-                img_txt = overlay_text(img, out_file, started, PrintJobStatus, fps, print_data, duration, modes, opacity)
+                img_txt = overlay_text(img, out_file_short, started, PrintJobStatus, fps, print_data, duration, modes, opacity)
                 while postroll > 0:
                     out.write(img_txt)  #write last frame to the output video
                     postroll -= 1
                 frames = 0
                 writing = False
+                tmp_file_short = None
                 if arg.daemon:
                     out.release()
                     log.info("file: %s written" % out_file)
                     if arg.postprocess:
-                        post_process_ffmpeg_thread(os.path.normpath(arg.outdirectory + out_file), os.path.normpath(arg.outdirectory + new_file), arg.deleteoriginal, arg.quality, show_output, FFMPEG_BINARY)
+                        post_process_ffmpeg_thread(tmp_file, out_file, arg.deleteoriginal, arg.quality, show_output, FFMPEG_BINARY)
                     time.sleep(20)
                     log.info("Waiting to start Recording, please send/load file to printer")
                 else:
@@ -1545,7 +1560,7 @@ def main():
         pass
     log.info("file: %s written" % out_file)
     if arg.postprocess:
-        post_process_ffmpeg(os.path.normpath(arg.outdirectory + out_file), os.path.normpath(arg.outdirectory + new_file), arg.deleteoriginal, arg.quality, show_output, FFMPEG_BINARY)
+        post_process_ffmpeg(tmp_file, out_file, arg.deleteoriginal, arg.quality, show_output, FFMPEG_BINARY)
         
 if __name__ == "__main__":
     main()
