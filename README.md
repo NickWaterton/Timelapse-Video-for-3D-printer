@@ -166,7 +166,7 @@ You can also specify the location and name of the output file using the `-o` opt
 
 You can specify the name and location of the log file using the `-l` option. Setting this to 'none', results in no log file.
 
-Using the `-od` option allows the output directory to be specified, default is the current directory. You can also specify the directory in the filename, but this option allows you to specify the directory without a file name, so the filenames are automatically generated. if you include a filename a(`-o`), it will override any pathname specified in the `-od` option. For example, including the options `-od ~/directory-name -o test.avi` will result in the file being written to "./test.avi" ie the current directory as the implicit ./ in test.avi will override the directory ("~/directory-name") given in the `-od` option.
+Using the `-od` option allows the output directory to be specified, default is the current directory. You can also specify the directory in the filename, but this option allows you to specify the directory without a file name, so the filenames are automatically generated. if you include a filename (`-o`), it will override any pathname specified in the `-od` option. For example, including the options `-od ~/directory-name -o test.avi` will result in the file being written to "./test.avi" ie the current directory as the implicit ./ in test.avi will override the directory ("~/directory-name") given in the `-od` option.
 
 You have to enclose pathnames in `""` if there are spaces in the pathnames.
 
@@ -180,3 +180,12 @@ The `-D` and `-X` options are for debugging, `-X` forces the program to start re
 
 
 An example output video (reg_litho_3cm[766].mp4) is included so you can see how it looks.
+
+## Advanced features
+If you run the program with the `-d` option, the the program will never exit (until you press `<CNTRL> C`). You can use this to send multiple prints, and capture them all. On a linux server (like Ubuntu), you can run the program in the background continually by adding `&` at the end of the command line.
+
+When running continually, the printer light will stay on, as the program checks to see if a print has started every second, and this web activity automatically switches the printer light on (just so that you are aware).
+
+This can be useful if you want to send print from platforms other than windows. For example, if you want to automate printing, and would like to capture the results of all the prints. You could take your model, slice it using Cura on linux, and send the resulting gcode to the printer using the standard linux CUPS system. This could be automated, so that sending an .stl file to a directory automatically slices and prints the file. You can capture the video of this in the background, and still check progress over the web (or via the app) as normal.
+
+To set up the printer in CUPS, just add it as a "raw" (*NOT* Generic) network printer on port 9100. the CUPS interface should find it automatically. You can then send gcode files (not .stl!) using `lp`.
