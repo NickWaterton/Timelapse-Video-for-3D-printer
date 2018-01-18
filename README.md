@@ -146,7 +146,7 @@ sudo apt-get install ffmpeg
 Or any of the other zillions of ways to get ffmpeg in Ubuntu.
 
 ## Usage
-If the ffmpeg executable is not in your path, or you are on windows, you need to specify the location and name of the ffmpeg executable on the command line.
+If the ffmpeg executable is not in your path, you need to specify the location and name of the ffmpeg executable on the command line. You don't need to do this if the executable is in the current directory.
 You can now generate an .mp4 file time lapse video like this:
 
 ```bash
@@ -155,18 +155,20 @@ You can now generate an .mp4 file time lapse video like this:
 
 or (windows)
 ```bash
-python record_3dprint.py -u x.x.x.x -F -Fx /path-to-ffmpeg/ffmpeg.exe
+python record_3dprint.py -u x.x.x.x -F -Fx "C:\path to ffmpeg\ffmpeg.exe"
 ```
 
 default file name is now ".mp4"
 
 You can use `-F` or `-P`, -F causes the .mp4 to be created directly, -P creates a temporary Huge MJPG, then at the end of the recording, converts it to a ".mp4" file, and makes it suitable for web streaming. This obviously uses vastly more disk space than creating the (relatively) small ".mp4" file directly.
 
-You can also specify the location and name of the output file using the `-o` option. The type of file is dictated by the extension. I have tested ".mkv", ".mov", ".avi".
+You can also specify the location and name of the output file using the `-o` option. The type of file is dictated by the extension. I have tested ".mkv", ".mov", ".avi", ".mp4".
 
 You can specify the name and location of the log file using the `-l` option. Setting this to 'none', results in no log file.
 
 Using the `-od` option allows the output directory to be specified, default is the current directory. You could specify this in the filename, but this option allows you to specify the directory, while the filenames are automatically generated. Don't include a path in the filename, if you are using the `-od` option.
+
+You have to enclose pathnames in `""` if there are spaces in the pathnames.
 
 The maximum length (in seconds) of the time lapse video is 5 minutes by default, it may be shorter (for a print of less that 50 minutes), you can set this to whatever you like using the `-t` option, and the fps (frames per second) will be adjusted accordingly. Setting this to 0 results in a video of unlimited length.
 
