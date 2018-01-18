@@ -166,7 +166,7 @@ You can also specify the location and name of the output file using the `-o` opt
 
 You can specify the name and location of the log file using the `-l` option. Setting this to 'none', results in no log file.
 
-Using the `-od` option allows the output directory to be specified, default is the current directory. You could specify this in the filename, but this option allows you to specify the directory, while the filenames are automatically generated. Don't include a path in the filename, if you are using the `-od` option.
+Using the `-od` option allows the output directory to be specified, default is the current directory. You can also specify the directory in the filename, but this option allows you to specify the directory without a file name, so the filenames are automatically generated. if you include a filename a(`-o`), it will override any pathname specified in the `-od` option. For example, including the options `-od ~/directory-name -o test.avi` will result in the file being written to "./test.avi" ie the current directory as the implicit ./ in test.avi will override the directory ("~/directory-name") given in the `-od` option.
 
 You have to enclose pathnames in `""` if there are spaces in the pathnames.
 

@@ -957,6 +957,45 @@ class VideoWriter():
         self.pW.stdin.flush()
         self.pW.communicate()
         self.pW.stdin.close()
+        
+        
+class progress_bar():
+    '''
+    create terminal progress bar
+    @params:
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        bar_length  - Optional  : character length of bar (Int)
+    '''
+    
+    def __init__(self,total=100, prefix='', suffix='', decimals=1, bar_length=100):
+        self.total = total
+        self.prefix = prefix
+        self.suffix = suffix
+        self.decimals = decimals
+        self.bar_length = bar_length
+        self.prev_output_len = 0
+        
+    def update(self,iteration):
+        iteration = max(min(iteration, self.total), 0)
+        str_format = "{0:." + str(self.decimals) + "f}"
+        percents = str_format.format(100 * (iteration / float(self.total)))
+        filled_length = int(round(self.bar_length * iteration / float(self.total)))
+        bar = '█'.decode('utf8') * filled_length + '-' * (self.bar_length - filled_length)
+        
+        output = '\r%s |%s| %s%s %s' % (self.prefix, bar, percents, '%', self.suffix)
+        
+        current_output_len = len(output)
+        diff = self.prev_output_len - current_output_len
+        if diff > 0:    #if output is shorter than previously
+            output += ' ' * diff    #pad output with spaces
+    
+        self.prev_output_len = current_output_len
+
+        sys.stdout.write(output)
+        sys.stdout.flush()
        
 #----------------------End of Classes -------------------------
 
@@ -989,32 +1028,6 @@ def setup_logger(logger_name, log_file, level=None, console=False):
     except Exception as e:
         print("Error in Logging setup: %s - do you have write permission for the log file?" % e)
         sys.exit(1)
-        
-# Print iterations progress
-def print_progress(iteration, total, prefix='', suffix='', decimals=1, bar_length=100):
-    """
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : positive number of decimals in percent complete (Int)
-        bar_length  - Optional  : character length of bar (Int)
-    """
-    if iteration > total:
-        iteration = total
-    str_format = "{0:." + str(decimals) + "f}"
-    percents = str_format.format(100 * (iteration / float(total)))
-    filled_length = int(round(bar_length * iteration / float(total)))
-    bar = '█'.decode('utf8') * filled_length + '-' * (bar_length - filled_length)
-
-    sys.stdout.write('\r%s |%s| %s%s %s' % (prefix, bar, percents, '%', suffix)),
-
-    #if iteration == total:
-    #    sys.stdout.write('\n')
-    sys.stdout.flush()
-        
         
 def read_data(url):
     try:
@@ -1361,14 +1374,20 @@ def main():
     log_file=[os.path.normpath(os.path.expanduser(arg.log))]
     
     setup_logger('Main', log_file, level=log_level, console=True)
-    setup_logger('Secondary', log_file, level=log_level, console=False)
-    
     log = logging.getLogger('Main')                       #set up Main logging
-    log_to_file = logging.getLogger('Secondary')          #set up non console logging
     
     log.info("****** Program Started ********")
     log.debug("Debug Mode")
-    log.info("Logging to file: %s" % log_file[0])
+    
+    if log_file[0].upper() != 'NONE':
+        setup_logger('Secondary', log_file, level=log_level, console=False)
+        log.info("Logging to file: %s" % log_file[0])
+    else:
+        log.info("Not logging to file")
+        
+    log_to_file = logging.getLogger('Secondary')      #set up non console logging (does nothing if log to file not enabled)
+    
+    #---------- End Logging --------------
     
     if arg.out is None:
         out_dir = os.path.normpath(arg.outdirectory)
@@ -1387,6 +1406,7 @@ def main():
         
     FFMPEG_BINARY = arg.ffmpegexecutable
     tmp_file_short = None
+    progress = progress_bar(100, decimals=0, bar_length=40)
     
     modes = {"idle":[10004,10006,10007], "printing":[10002,10003,10018,10023,10021], "invalid":[9999], "busy":[10001,10006,10028], "debug":[0]} #10028 bed moving?completing?, 100022?
         
@@ -1442,6 +1462,7 @@ def main():
                 else:
                     out_file = get_filename(arg.out, out_dir=out_dir)
                 out_file_short = os.path.basename(out_file)
+                tmp_file = ''
                 #duration    
                 if arg.time is None:
                     fps = max(1, arg.fps)
@@ -1495,22 +1516,22 @@ def main():
                 
                 frames += 1
                 
-                if frames % 30 == 0 and not os.path.exists(out_file):
-                    log.warn("Output file %s is not being written:" % out_file)
+                if frames % 30 == 0 and not (os.path.exists(out_file) or os.path.exists(tmp_file)):
+                    log.warn("Output file %s is not being written:" % dest_file)
                     
                 if print_data['filamentRemain'] == print_data['filamentSub']:   #single filament
-                    suffix_str = "time remaining %d:%d, remaining fil: %d%% %s         " % (print_data['hours'],
-                                                                                            print_data['mins'],
-                                                                                            print_data['filamentRemain'], 
-                                                                                            elapsed_time)
+                    suffix_str = "time remaining %d:%d, remaining fil: %d%% %s" % ( print_data['hours'],
+                                                                                    print_data['mins'],
+                                                                                    print_data['filamentRemain'], 
+                                                                                    elapsed_time)
                 else:
-                    suffix_str = "printing %s, %s, time remaining %d:%d, remaining fil1: %d%% fil2: %d%% %s         " % (   print_data['material_name'],
-                                                                                                                            print_data['material_color_name'],
-                                                                                                                            print_data['hours'],
-                                                                                                                            print_data['mins'],
-                                                                                                                            print_data['filamentRemain'], 
-                                                                                                                            print_data['filamentSub'], 
-                                                                                                                            elapsed_time)
+                    suffix_str = "printing %s, %s, time remaining %d:%d, remaining fil1: %d%% fil2: %d%% %s" % (    print_data['material_name'],
+                                                                                                                    print_data['material_color_name'],
+                                                                                                                    print_data['hours'],
+                                                                                                                    print_data['mins'],
+                                                                                                                    print_data['filamentRemain'], 
+                                                                                                                    print_data['filamentSub'], 
+                                                                                                                    elapsed_time)
                 if log_level == logging.DEBUG:
                     log.debug("Wrote %d frames (%d bytes) at %dfps, %scomp: %d%%, PrintJobStatus: %d(%s) bed_temp:%d noz_temp:%d %s" % (frames,
                                                                                                                                         len(img), 
@@ -1524,7 +1545,10 @@ def main():
                                                                                                                                         suffix_str.replace("remaining","rem")))
                 else:
                     log_to_file.info("Wrote %d frames (%d bytes) at %dfps to file: %s, completed: %d%%, %s" % (frames, len(img), fps, dest_file, print_data['percent'], suffix_str))
-                    print_progress(print_data['percent'], 100, prefix=dest_file, suffix=suffix_str, decimals=0, bar_length=40)
+                    #print_progress(print_data['percent'], 100, prefix=dest_file, suffix=suffix_str, decimals=0, bar_length=40)
+                    progress.prefix=dest_file
+                    progress.suffix=suffix_str
+                    progress.update(print_data['percent'])
             
             if writing and (PrintJobStatus in modes["idle"] or PrintJobStatus in modes["invalid"]):
                 log.info("\nPrinting finished at %s" % (time.ctime()))
@@ -1535,6 +1559,7 @@ def main():
                     out.write(img_txt)  #write last frame to the output video
                     postroll -= 1
                 frames = 0
+                progress.prev_output_len = 0
                 writing = False
                 tmp_file_short = None
                 if arg.daemon:
