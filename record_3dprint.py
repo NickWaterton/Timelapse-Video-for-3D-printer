@@ -16,6 +16,7 @@ url for jpeg image is http://myprinterIP/?action=snapshot or http://myprinterIP/
 data url http://myprinterIP/cgi-bin/config_periodic_data.cgi
 
 V 1.01  NW 18/1/2018    Updated output directory option
+V 1.02  NW 24/1/2018    Added already-running check using sockets
 '''
 
 from __future__ import print_function
@@ -30,8 +31,9 @@ import subprocess
 import threading
 import logging
 from logging.handlers import RotatingFileHandler
+import socket
 
-__version__ = "1.01"
+__version__ = "1.02"
 
 """ 
 Original Author  Ernesto P. Adorio, Ph.D 
@@ -1389,6 +1391,14 @@ def main():
     
     #---------- End Logging --------------
     
+    #check if program is already running
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('localhost', 1963))    #randomly chosen socket number
+    except socket.error:
+        log.error("Another instance of this program is already running, can only have one instance!")
+        sys.exit(1)
+    
     if arg.out is None:
         out_dir = os.path.normpath(arg.outdirectory)
     else:
@@ -1586,6 +1596,7 @@ def main():
     log.info("file: %s written" % out_file)
     if arg.postprocess:
         post_process_ffmpeg(tmp_file, out_file, arg.deleteoriginal, arg.quality, show_output, FFMPEG_BINARY)
+    s.close()   #close socket
         
 if __name__ == "__main__":
     main()
